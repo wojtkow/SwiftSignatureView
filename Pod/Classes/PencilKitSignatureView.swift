@@ -53,13 +53,26 @@ open class PencilKitSignatureView: UIView, ISignatureView {
     The stroke alpha. 
     */
     open var strokeAlpha: CGFloat = 1
+    
+    /**
+     The background color
+     */
+    open var bgColor: UIColor = .clear {
+        didSet {
+            canvas.backgroundColor = bgColor
+        }
+    }
 
     /**
     The UIImage representation of the signature. Read/write.
     */
     open var signature: UIImage? {
         get {
-            canvas.drawing.image(from: bounds, scale: 1.0)
+            var image: UIImage?
+            traitCollection.performAsCurrent {
+                image = canvas.drawing.image(from: bounds, scale: UIScreen.main.scale)
+            }
+            return image
         }
 
         set {
@@ -72,12 +85,16 @@ open class PencilKitSignatureView: UIView, ISignatureView {
 
     open func getCroppedSignature() -> UIImage? {
         return autoreleasepool {
-            let fullRender = canvas.drawing.image(from: canvas.bounds, scale: scale)
-            let bounds = self.scale(
-                canvas.drawing.bounds.insetBy(dx: -maximumStrokeWidth/2, dy: -maximumStrokeWidth/2),
-                byFactor: fullRender.scale)
-            guard let imageRef: CGImage = fullRender.cgImage?.cropping(to: bounds) else { return nil }
-            return UIImage(cgImage: imageRef, scale: scale, orientation: fullRender.imageOrientation)
+            var image: UIImage?
+            traitCollection.performAsCurrent {
+              let fullRender = canvas.drawing.image(from: canvas.bounds, scale: scale)
+              let bounds = self.scale(
+                  canvas.drawing.bounds.insetBy(dx: -maximumStrokeWidth/2, dy: -maximumStrokeWidth/2),
+                  byFactor: fullRender.scale)
+              guard let imageRef: CGImage = fullRender.cgImage?.cropping(to: bounds) else { return }
+              image = UIImage(cgImage: imageRef, scale: scale, orientation: fullRender.imageOrientation)
+          }
+          return image
         }
     }
 
@@ -122,6 +139,7 @@ open class PencilKitSignatureView: UIView, ISignatureView {
     }
 
     private func initialize() {
+        self.overrideUserInterfaceStyle = .light
         self.backgroundColor = UIColor.black
         canvas.allowsFingerDrawing = true
         canvas.delegate = self
